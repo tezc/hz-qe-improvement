@@ -1,7 +1,9 @@
 package com.hazelcast.it.test;
 
 import com.hazelcast.client.HazelcastClient;
+import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.HazelcastInstanceAware;
 import com.hazelcast.it.Client;
 import com.hazelcast.it.task.ExceptionTask;
 import com.hazelcast.it.task.RemoteTask;
@@ -19,7 +21,9 @@ public class TestClient implements TaskHandler, Serializable
     private final ExecutorService executor = Executors.newFixedThreadPool(10);
 
     public TestClient() {
-        instance = HazelcastClient.newHazelcastClient();
+        ClientConfig config = new ClientConfig();
+        config.getNetworkConfig().addAddress("172.17.0.1:5701");
+        instance = HazelcastClient.newHazelcastClient(config);
     }
 
     public void start() {
@@ -51,7 +55,10 @@ public class TestClient implements TaskHandler, Serializable
 
     @Override
     public void handleTask(RemoteTask<Object> task) {
-        task.setHazelcastInstance(instance);
+        if (task instanceof HazelcastInstanceAware) {
+            ((HazelcastInstanceAware)task).setHazelcastInstance(instance);
+        }
+
         executor.submit(task);
     }
 

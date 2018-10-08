@@ -1,12 +1,15 @@
 package com.hazelcast.it.test;
 
 import com.hazelcast.client.HazelcastClient;
+import com.hazelcast.config.Config;
+import com.hazelcast.config.JoinConfig;
+import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.HazelcastInstanceAware;
 import com.hazelcast.it.task.RemoteTask;
 import com.hazelcast.it.Server;
 import com.hazelcast.it.TaskHandler;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -33,13 +36,26 @@ public class TestServer  implements TaskHandler {
 
     @Override
     public void handleTask(RemoteTask<Object> task) {
-        task.setHazelcastInstance(instance);
+        if (task instanceof HazelcastInstanceAware) {
+            ((HazelcastInstanceAware)task).setHazelcastInstance(instance);
+        }
         executor.submit(task);
     }
 
     public static void main(String[] args) {
 
-        HazelcastInstance member = Hazelcast.newHazelcastInstance();
+        Config config = new Config();
+        NetworkConfig networkConfig = config.getNetworkConfig();
+        networkConfig.getInterfaces().addInterface("172.17.0.1").setEnabled(true);
+        networkConfig.setPortAutoIncrement(false);
+
+        JoinConfig join = networkConfig.getJoin();
+        join.getMulticastConfig().setEnabled(false);
+        join.getAwsConfig().setEnabled(false);
+        join.getTcpIpConfig().setEnabled(true);
+        join.getTcpIpConfig().addMember("172.17.0.1:5701");
+
+        HazelcastInstance member = Hazelcast.newHazelcastInstance(config);
 
         TestServer testServer = new TestServer();
         testServer.start();

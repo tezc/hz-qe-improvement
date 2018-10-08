@@ -1,6 +1,8 @@
 package com.hazelcast.it;
 
 import com.hazelcast.it.task.RemoteTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.InetSocketAddress;
@@ -10,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class Server extends Thread {
 
+    private final Logger logger = LoggerFactory.getLogger(Client.class);
     private final TaskHandler taskHandler;
 
     private volatile boolean stop;
@@ -27,7 +30,7 @@ public class Server extends Thread {
         serverSocket.setReuseAddress(true);
         serverSocket.bind(new InetSocketAddress(ip, port));
 
-        System.out.println("Listening on : " + ip + ":" + port);
+        logger.info("Listening on : " + ip + ":" + port);
 
         accept();
         start();
@@ -36,7 +39,7 @@ public class Server extends Thread {
     private void accept() throws IOException {
         client = serverSocket.accept();
 
-        System.out.println("Client connected");
+        logger.info("Client connected from : " + client.getRemoteSocketAddress());
 
         msgHandler = new MsgHandler(taskHandler, client.getInputStream(), client.getOutputStream());
     }
@@ -47,30 +50,27 @@ public class Server extends Thread {
     }
 
     private void closeClient() {
-        System.out.println("Client disconnected");
+        logger.info("Shutting down the client ...");
 
         if (client != null) {
             try {
                 client.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.warn("Unexpected exception : " + e);
             }
         }
     }
 
     private void close() {
         closeClient();
+
         if (serverSocket != null) {
             try {
                 serverSocket.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.warn("Unexpected exception : " + e);
             }
         }
-    }
-
-    public <T> CompletableFuture<T> sendRequest(RemoteTask<T> task) throws IOException {
-        return msgHandler.sendRequest(task);
     }
 
     @Override
@@ -86,10 +86,14 @@ public class Server extends Thread {
                 }
             }
         } catch (Throwable t) {
-            t.printStackTrace();
+            logger.warn("Server shutting down.. " + t);
         }
         finally {
             close();
         }
+    }
+
+    public <T> CompletableFuture<T> sendRequest(RemoteTask<T> task) throws IOException {
+        return msgHandler.sendRequest(task);
     }
 }

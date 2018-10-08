@@ -1,12 +1,16 @@
 package com.hazelcast.it;
 
 import com.hazelcast.it.task.RemoteTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.util.concurrent.CompletableFuture;
 
 public class Client extends Thread {
+    private final Logger logger = LoggerFactory.getLogger(Client.class);
+
     private volatile boolean stop;
 
     private Socket socket;
@@ -32,24 +36,21 @@ public class Client extends Thread {
                 return;
 
             } catch (IOException e) {
-                System.out.println("Cannot connect to " + ip + ":" + port);
+                logger.warn("Cannot connect to " + ip + ":" + port);
+
                 try {
                     Thread.sleep(2000);
                 } catch (InterruptedException e1) {
-                    e1.printStackTrace();
+                    logger.warn("Interrupted .. ", e1);
                 }
             }
         }
     }
 
     private void connect() throws IOException {
-        this.socket = new Socket(ip, port);
-        System.out.println("Client connected");
+        socket = new Socket(ip, port);
+        logger.info("Client connected to " + ip + ":" + port);
         msgHandler = new MsgHandler(taskHandler, socket.getInputStream(), socket.getOutputStream());
-    }
-
-    public <T> CompletableFuture<T> sendRequest(RemoteTask<T> task) throws IOException, InterruptedException {
-        return msgHandler.sendRequest(task);
     }
 
     public void shutdown() {
@@ -58,13 +59,13 @@ public class Client extends Thread {
     }
 
     private void close() {
-        System.out.println("TestClient disconnected");
+        logger.info("Client shutting down..");
 
         if (socket != null) {
             try {
                 socket.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.warn("Unexpected error " + e);
             }
         }
     }
@@ -83,10 +84,15 @@ public class Client extends Thread {
                 }
             }
 
-            System.out.println("Stopping client...");
-        } catch (Throwable t) {
-            close();
-            t.printStackTrace();
+            logger.info("Stopping client...");
         }
+        catch (Throwable t) {
+            close();
+            logger.warn("Shutting down client thread : " + t);
+        }
+    }
+
+    public <T> CompletableFuture<T> sendRequest(RemoteTask<T> task) throws IOException {
+        return msgHandler.sendRequest(task);
     }
 }
