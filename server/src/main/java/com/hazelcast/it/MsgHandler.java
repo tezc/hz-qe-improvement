@@ -52,8 +52,7 @@ public class MsgHandler {
 
     public void sendResponse(Request request, Object o) throws IOException {
         synchronized (lock) {
-            Response response = new Response(request.getSequence(), o);
-            out.writeObject(response);
+            out.writeObject(new Response(request.getSequence(), o));
             out.reset();
         }
     }

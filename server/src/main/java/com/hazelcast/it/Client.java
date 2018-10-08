@@ -47,15 +47,20 @@ public class Client extends Thread {
         }
     }
 
+    public void shutdown() {
+        stop = true;
+        this.interrupt();
+        try {
+            this.join();
+        } catch (InterruptedException e) {
+            logger.warn("Unexpected interrupt :" + e);
+        }
+    }
+
     private void connect() throws IOException {
         socket = new Socket(ip, port);
         logger.info("Client connected to " + ip + ":" + port);
         msgHandler = new MsgHandler(taskHandler, socket.getInputStream(), socket.getOutputStream());
-    }
-
-    public void shutdown() {
-        stop = true;
-        this.interrupt();
     }
 
     private void close() {

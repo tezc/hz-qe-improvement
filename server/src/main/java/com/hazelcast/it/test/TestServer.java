@@ -10,10 +10,14 @@ import com.hazelcast.core.HazelcastInstanceAware;
 import com.hazelcast.it.task.RemoteTask;
 import com.hazelcast.it.Server;
 import com.hazelcast.it.TaskHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class TestServer  implements TaskHandler {
+    private final Logger logger = LoggerFactory.getLogger(TestClient.class);
 
     private final HazelcastInstance instance;
     private final ExecutorService executor = Executors.newFixedThreadPool(10);
@@ -26,10 +30,9 @@ public class TestServer  implements TaskHandler {
         try {
             Server server = new Server(this);
             server.accept("127.0.0.1", 9090);
-
         }
         catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Exception : ", e);
         }
     }
 
@@ -46,14 +49,14 @@ public class TestServer  implements TaskHandler {
 
         Config config = new Config();
         NetworkConfig networkConfig = config.getNetworkConfig();
-        networkConfig.getInterfaces().addInterface("172.17.0.1").setEnabled(true);
+        networkConfig.getInterfaces().addInterface("127.0.0.1").setEnabled(true);
         networkConfig.setPortAutoIncrement(false);
 
         JoinConfig join = networkConfig.getJoin();
         join.getMulticastConfig().setEnabled(false);
         join.getAwsConfig().setEnabled(false);
         join.getTcpIpConfig().setEnabled(true);
-        join.getTcpIpConfig().addMember("172.17.0.1:5701");
+        join.getTcpIpConfig().addMember("127.0.0.1:5701");
 
         HazelcastInstance member = Hazelcast.newHazelcastInstance(config);
 

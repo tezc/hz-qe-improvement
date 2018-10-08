@@ -47,6 +47,12 @@ public class Server extends Thread {
     public void shutdown() {
         stop = true;
         this.interrupt();
+
+        try {
+            this.join();
+        } catch (InterruptedException e) {
+            logger.warn("Unexpected interrupt :" + e);
+        }
     }
 
     private void closeClient() {

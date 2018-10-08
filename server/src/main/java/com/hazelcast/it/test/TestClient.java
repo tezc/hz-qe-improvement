@@ -9,6 +9,8 @@ import com.hazelcast.it.task.ExceptionTask;
 import com.hazelcast.it.task.RemoteTask;
 import com.hazelcast.it.task.SimplePutTask;
 import com.hazelcast.it.TaskHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.concurrent.CompletableFuture;
@@ -17,6 +19,8 @@ import java.util.concurrent.Executors;
 
 public class TestClient implements TaskHandler, Serializable
 {
+    private final Logger logger = LoggerFactory.getLogger(TestClient.class);
+
     private final HazelcastInstance instance;
     private final ExecutorService executor = Executors.newFixedThreadPool(10);
 
@@ -43,13 +47,31 @@ public class TestClient implements TaskHandler, Serializable
             CompletableFuture<Object> future3 = client.sendRequest(new ExceptionTask());
             future3.thenAccept(System.out::println);
             future3.exceptionally(th -> {
-                System.out.println("Exception task threw exception : ");
-                th.printStackTrace();
+                logger.error("Exception task threw exception : ", th);
                 return null;
             });
+
+            /*
+             * To serialize anonymous non static classes, we must declare wrapper
+             * class as Serializable, also receiver side should have wrapper class in its classpath
+             *
+             * For BlackDuck, probe must have test classes as dependency, also test class' must be declared serializable
+             *
+             *
+            CompletableFuture<Object> future4 = client.sendRequest(new RemoteTask<Object>() {
+                @Override
+                public Object execute() {
+                    return "hops";
+                }
+            });
+
+
+            System.out.println(future4.get());
+            */
+
         }
         catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Exception : ", e);
         }
     }
 
